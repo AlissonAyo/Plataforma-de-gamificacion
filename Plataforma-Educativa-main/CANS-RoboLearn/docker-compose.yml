@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: cans-robolearn-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: cans_admin
+      POSTGRES_PASSWORD: cans_dev_2026
+      POSTGRES_DB: cans_robolearn
+
+    ports:
+      - "5433:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

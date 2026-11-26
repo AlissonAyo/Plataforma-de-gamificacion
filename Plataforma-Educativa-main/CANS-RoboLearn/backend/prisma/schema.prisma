@@ -1,0 +1,193 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Rol {
+  ESTUDIANTE
+  DOCENTE
+  ADMINISTRADOR
+}
+
+enum EstadoUsuario {
+  ACTIVO
+  INACTIVO
+}
+
+model Usuario {
+  id           Int           @id @default(autoincrement())
+  nombres      String
+  apellidos    String
+  usuario      String        @unique
+  correo       String        @unique
+  passwordHash String
+  rol          Rol
+  estado       EstadoUsuario @default(ACTIVO)
+
+  // Para estudiantes: un estudiante pertenece a un solo curso.
+  cursoId Int?
+  curso   Curso? @relation("EstudiantesCurso", fields: [cursoId], references: [id])
+
+  // Para docentes: un docente puede estar asignado a varios cursos.
+  cursosDocente DocenteCurso[]
+
+  puntuaciones Puntuacion[]
+  progresos    Progreso[]
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+}
+
+model Curso {
+  id          Int     @id @default(autoincrement())
+  nombre      String
+  descripcion String?
+  activo      Boolean @default(true)
+
+  estudiantes Usuario[]      @relation("EstudiantesCurso")
+  docentes    DocenteCurso[]
+  unidades    Unidad[]
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+}
+
+model DocenteCurso {
+  id Int @id @default(autoincrement())
+
+  docenteId Int
+  docente   Usuario @relation(fields: [docenteId], references: [id])
+
+  cursoId Int
+  curso   Curso @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+
+  creadoEn DateTime @default(now())
+
+  @@unique([docenteId, cursoId])
+  @@index([docenteId])
+  @@index([cursoId])
+}
+
+model Unidad {
+  id          Int     @id @default(autoincrement())
+  nombre      String
+  descripcion String?
+  orden       Int
+
+  cursoId Int
+  curso   Curso @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+
+  temas Tema[]
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  @@unique([cursoId, orden])
+  @@index([cursoId])
+}
+
+model Tema {
+  id          Int     @id @default(autoincrement())
+  nombre      String
+  descripcion String?
+  orden       Int
+
+  unidadId Int
+  unidad   Unidad @relation(fields: [unidadId], references: [id], onDelete: Cascade)
+
+  juegos Juego[]
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  @@unique([unidadId, orden])
+  @@index([unidadId])
+}
+
+model Juego {
+  id          Int     @id @default(autoincrement())
+  nombre      String
+  descripcion String?
+  activo      Boolean @default(true)
+
+  temaId Int
+  tema   Tema @relation(fields: [temaId], references: [id], onDelete: Cascade)
+
+  niveles      Nivel[]
+  puntuaciones Puntuacion[]
+  progresos    Progreso[]
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  @@index([temaId])
+}
+
+model Nivel {
+  id          Int    @id @default(autoincrement())
+  nombre      String
+  numero      Int
+  dificultad  Int    @default(1)
+  intentosMax Int?
+
+  juegoId Int
+  juego   Juego @relation(fields: [juegoId], references: [id], onDelete: Cascade)
+
+  puntuaciones Puntuacion[]
+  progresos    Progreso[]
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  @@unique([juegoId, numero])
+  @@index([juegoId])
+}
+
+model Puntuacion {
+  id      Int @id @default(autoincrement())
+  puntos  Int
+  intento Int @default(1)
+
+  usuarioId Int
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+
+  juegoId Int
+  juego   Juego @relation(fields: [juegoId], references: [id])
+
+  nivelId Int?
+  nivel   Nivel? @relation(fields: [nivelId], references: [id])
+
+  creadoEn DateTime @default(now())
+
+  @@index([usuarioId])
+  @@index([juegoId])
+  @@index([nivelId])
+}
+
+model Progreso {
+  id         Int     @id @default(autoincrement())
+  completado Boolean @default(false)
+  porcentaje Float   @default(0)
+  intentos   Int     @default(0)
+
+  usuarioId Int
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+
+  juegoId Int
+  juego   Juego @relation(fields: [juegoId], references: [id])
+
+  nivelId Int?
+  nivel   Nivel? @relation(fields: [nivelId], references: [id])
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  @@unique([usuarioId, juegoId, nivelId])
+  @@index([usuarioId])
+  @@index([juegoId])
+  @@index([nivelId])
+}
